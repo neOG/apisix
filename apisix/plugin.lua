@@ -67,6 +67,7 @@ local function sort_plugin(l, r)
 end
 
 
+-- 使用 package.loaded[luafile] = nil，require 时可以重新加载新的插件
 local function unload_plugin(name, is_stream_plugin)
     local pkg_name = "apisix.plugins." .. name
     if is_stream_plugin then
@@ -88,6 +89,7 @@ local function load_plugin(name, plugins_list, is_stream_plugin)
         pkg_name = "apisix.stream.plugins." .. name
     end
 
+    -- require 导入对应插件，pcall 可判断操作是否成功
     local ok, plugin = pcall(require, pkg_name)
     if not ok then
         core.log.error("failed to load plugin [", name, "] err: ", plugin)
@@ -129,6 +131,7 @@ local function load_plugin(name, plugins_list, is_stream_plugin)
     end
 
     plugin.name = name
+    -- 加载插件的额外配置
     plugin.attr = plugin_attr(name)
     core.table.insert(plugins_list, plugin)
 
@@ -140,6 +143,7 @@ local function load_plugin(name, plugins_list, is_stream_plugin)
 end
 
 
+-- 先依次清除原先缓存的数据，再依次重新加载插件
 local function load(plugin_names)
     local processed = {}
     for _, name in ipairs(plugin_names) do
@@ -230,6 +234,7 @@ function _M.load(config)
 
     if not config then
         -- called during starting or hot reload in admin
+        -- 从 config-default.yaml 配置文件获取所有开启的 plugin names
         local err
         local_conf, err = core.config.local_conf(true)
         if not local_conf then
@@ -693,6 +698,9 @@ function _M.run_plugin(phase, plugins, api_ctx)
                             core.log.warn(plugins[i].name, " exits with status code ", code)
                         end
 
+                        -- ngx.exit 返回 >= 200 时，请求会退出当前请求处理阶段，然后直接返回给客户端，但是 log_by_lua_block 阶段都会执行。
+                        -- ngx.exit(ngx.OK)，请求会退出当前处理阶段，进入下一个阶段。
+                        -- ngx.OK 对应值是 0
                         ngx_exit(1)
                     end
                 end

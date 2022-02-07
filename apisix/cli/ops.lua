@@ -302,6 +302,10 @@ local config_schema = {
 }
 
 
+-- 读取合并后配置文件
+-- 依次检查配置文件内容，得到 sys_conf table
+-- 集合 ngx_tpl、sys_conf 生成 nginx.conf 文件
+-- 最后用生成的 nginx.conf 启动 openresty
 local function init(env)
     if env.is_root_path then
         print('Warning! Running apisix under /root is only suitable for '
@@ -318,6 +322,7 @@ local function init(env)
     end
 
     -- read_yaml_conf
+    -- 读取合并后的配置文件，config.yaml（用户额外的配置最好写在此文件）和 config-default.yaml 文件
     local yaml_conf, err = file.read_yaml_conf(env.apisix_home)
     if not yaml_conf then
         util.die("failed to read local yaml config of apisix: ", err, "\n")
@@ -890,6 +895,7 @@ local function start(env, ...)
     init(env)
     init_etcd(env, args)
 
+    -- env.openresty_args: openresty -p /Users/neo/tsin_api_gw -c /Users/neo/tsin_api_gw/conf/nginx.conf
     util.execute_cmd(env.openresty_args)
 end
 

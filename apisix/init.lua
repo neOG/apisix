@@ -89,6 +89,7 @@ function _M.http_init(args)
 end
 
 
+-- init_worker_by_lua_block 阶段，每个 worker 进程都会执行。
 function _M.http_init_worker()
     local seed, err = core.utils.get_seed_from_urandom()
     if not seed then
@@ -343,6 +344,7 @@ local function common_phase(phase_name)
 end
 
 
+-- access_by_lua_block 阶段
 function _M.http_access_phase()
     local ngx_ctx = ngx.ctx
 
@@ -521,6 +523,7 @@ function _M.http_access_phase()
         core.response.exit(code)
     end
 
+    -- 选择一个后端服务节点
     local server, err = load_balancer.pick_server(route, api_ctx)
     if not server then
         core.log.error("failed to pick server: ", err)
@@ -733,6 +736,7 @@ function _M.http_log_phase()
 end
 
 
+-- upstream balancer_by_lua_block 阶段
 function _M.http_balancer_phase()
     local api_ctx = ngx.ctx.api_ctx
     if not api_ctx then
